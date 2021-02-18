@@ -5,6 +5,14 @@ import numpy as np
 # from datetime import datetime, timedelta
 import datetime as dt
 import random
+
+# For reading sound file
+import librosa
+# For signal processing
+from scipy.signal import find_peaks
+from scipy.fft import irfft
+from scipy.fft import rfft,rfftfreq
+
 # Read in relevant data files
 samples_df = pd.read_csv('samples_short.csv')
 ground_truth = pd.read_csv('ground_truth_short.csv')
@@ -38,8 +46,25 @@ len(os.listdir(directory_of_sounds + '/vi95kMQ65UeU7K1wae12D1GUeXd2')) # should 
 def detect_coughs(file = 'sounds/samples/vi95kMQ65UeU7K1wae12D1GUeXd2/sample-1613658921823.m4a'):
     # Replace the below random code with something meaningful which
     # generates a one-column dataframe with a column named "peak_start"
-    peaks = np.random.sample(5) * 30
-    peaks.sort()
+    y,sr = librosa.load(file) # sr is the sampling rate
+    N = y.shape[0] # N is number of samples
+    
+    yf = rfft(y)
+    xf = rfftfreq(N,1/sr) # Going to frequency domain
+    
+    points_per_freq = len(xf1) / (sr / 2)
+    target_idx_100 = int(points_per_freq * 100)
+    target_idx_2000 = int(points_per_freq * 2000) 
+    
+    # Removing all frequencies except 100-2000 Hz, as this is the typical range of frequencies for a cough from an adult. 
+    # Reference: https://pubmed.ncbi.nlm.nih.gov/12666872/
+    yf[ : target_idx_100 + 1 ] = 0
+    yf[target_idx_2000 - 1 : ] = 0
+    
+    new_sig = irfft(yf) # Going back to time domain with filtered signal
+    
+    peaks_array = find_peaks(new_sig,prominence=0.02)[0] #Finding start of peaks in filtered signal, should correspond to coughs
+    peaks = peaks_array/sr # The time instant of starting of peak is arrived at by dividing by sampling rate
     out = pd.DataFrame({'peak_start': peaks})
     return(out)
 
